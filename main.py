@@ -1,10 +1,9 @@
 import csv
 import random
 import sys
-import urllib.request
 
-# Raw URL for the GoodmanSciences Periodic Table Gist
-CSV_URL = "https://gist.githubusercontent.com/GoodmanSciences/c2dd862cd38f21b0ad36b8f96b4bf1ee/raw"
+# Local CSV file in the same directory
+CSV_FILE = "elements.csv"
 
 
 def get_key():
@@ -34,29 +33,25 @@ def get_key():
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 
-def load_csv(url):
-    """Fetches and parses CSV data, filtering internally by atomic number ranges."""
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req) as response:
-        lines = [line.decode("utf-8") for line in response.readlines()]
-
-    reader = csv.DictReader(lines)
+def load_csv(filename):
+    """Parses local CSV file, filtering internally by atomic number ranges."""
     filtered = []
-
-    for row in reader:
-        raw_num = (
-            row.get("AtomicNumber")
-            or row.get("Atomic Number")
-            or row.get("Number")
-        )
-        if raw_num is not None:
-            try:
-                num = int(raw_num)
-                # Keep ranges 1-38, 46-56, and 78-98
-                if (1 <= num <= 38) or (46 <= num <= 56) or (78 <= num <= 98):
-                    filtered.append(row)
-            except ValueError:
-                continue
+    with open(filename, mode="r", encoding="utf-8") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            raw_num = (
+                row.get("AtomicNumber")
+                or row.get("Atomic Number")
+                or row.get("Number")
+            )
+            if raw_num is not None:
+                try:
+                    num = int(raw_num)
+                    # Keep ranges 1-38, 46-56, and 78-98
+                    if (1 <= num <= 38) or (46 <= num <= 56) or (78 <= num <= 98):
+                        filtered.append(row)
+                except ValueError:
+                    continue
 
     return filtered
 
@@ -81,13 +76,16 @@ def print_stats(correct, incorrect):
 
 
 def main():
-    print("Fetching CSV data from GitHub Gist...")
+    print(f"Loading '{CSV_FILE}' from local directory...")
     try:
-        elements = load_csv(CSV_URL)
+        elements = load_csv(CSV_FILE)
         total_count = len(elements)
         print(f"Loaded {total_count} elements.\n")
+    except FileNotFoundError:
+        print(f"Error: Could not find '{CSV_FILE}' in the current folder.")
+        sys.exit(1)
     except Exception as e:
-        print(f"Error loading CSV: {e}")
+        print(f"Error reading CSV: {e}")
         sys.exit(1)
 
     print("--- Flashcards Ready ---")
